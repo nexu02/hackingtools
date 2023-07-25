@@ -1,0 +1,13 @@
+-It's necessary that the script has the capability of read files that contain formatted headers to use in the requests
+
+-I have to create a script to make the request against the app and parse the response headers into a file 
+and then use it with the main script to achive another layer of anonymity by changing the headers automatically
+
+-The main script have to has the capability to detect changes in:
+	+ Status codes
+	+ Response lenghts
+	+ Response body texts
+	+ Responses times
+	+ IP block messages
+
+-The script have to show the reponse body by setting a flag

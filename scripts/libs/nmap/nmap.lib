@@ -1,0 +1,9 @@
+#!/bin/bash
+
+syn_scan()
+{
+for (( i=0; $i<${targets_length}; i++ )); do
+	nmap -sS -Pn -n --min-rate 5000 "${TARGETS[$i]}" > "${DIRECTORIES[$i]}/nmap"
+	echo "The results of nmap scan are stored in ${TARGETS[$i]}/recon/nmap."
+done
+}

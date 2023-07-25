@@ -1,0 +1,19 @@
+#!/bin/bash
+
+ARIN_URL="https://whois.arin.net/ui/query.do"
+ARIN_POST="xslt=https://localhost:8080/ui/arin.xsl&flushCache=false&queryinput=$1&whoisSubmitButton="
+
+HTTP_RESPONSE=$(curl ${ARIN_URL} -X POST -d ${ARIN_POST} -v -s -D test.txt &> /dev/null && cat ./test.txt | grep "HTTP" | awk '{print $2}')
+LOCATION=""
+
+if [[ ${HTTP_RESPONSE} == "302" ]]; then
+	LOCATION=$(cat ./test.txt | grep -i "location" | awk '{print $2}' | tr -d "\r\t")
+	NET_RANGE=$(curl $LOCATION | grep -oEi '(([0-9]{1,3}[\.]){3}[0-9]{1,3})')
+	#END_IP=$(curl $LOCATION | grep -oEi 'endaddress=+"(([0-9]{1,3}[\.]){3}[0-9]{1,3})"' | awk -F= '{print $2}' | tr -d "\"")
+
+elif [[ ${HTTP_RESPONSE}  == "200" ]]; then
+	NET_RANGE=$(curl ${ARIN_URL} -X POST -d ${ARIN_POST} -s | grep -oE '(([0-9]{1,3}[\.]){3}[0-9]{1,3}) - (([0-9]{1,3}[\.]){3}[0-9]{1,3})')
+fi
+
+echo -e "NETRANGE:\n${NET_RANGE}"
+rm  ./test.txt
